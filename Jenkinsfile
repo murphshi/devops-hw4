@@ -19,15 +19,13 @@ pipeline {
       steps {
         sh '''
           set -eux
-
           rm -rf dist
           mkdir -p dist
 
-          # Write version file
-          echo "${VERSION}" > dist/VERSION.txt
-
-          # Package repo content into a zip artifact (exclude .git and dist itself)
-          zip -r "dist/app-${VERSION}.zip" . -x ".git/*" -x "dist/*"
+          tar -czf "dist/app-${VERSION}.tar.gz" \
+            --exclude=.git \
+            --exclude=dist \
+            .
           ls -lah dist
         '''
       }
