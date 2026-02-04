@@ -1,21 +1,26 @@
 pipeline {
   agent any
 
+  parameters {
+    booleanParam(
+      name: 'FORCE_FAIL',
+      defaultValue: false,
+      description: 'If checked, fail intentionally (for failure notification screenshot).'
+    )
+  }
+
   environment {
     VERSION = "0.1.${env.BUILD_NUMBER}"
 
     SONARQUBE_SERVER_NAME = 'SonarQube'
-
     SONAR_PROJECT_KEY  = 'devops-hw4'
     SONAR_PROJECT_NAME = 'devops-hw4'
-
     SONAR_SCANNER_TOOL = 'sonar-scanner'
 
     NOTIFY_EMAIL = 'murphshi0130@gmail.com'
   }
 
   stages {
-
     stage('Info') {
       steps {
         echo "Branch: ${env.BRANCH_NAME}"
@@ -28,7 +33,6 @@ pipeline {
       steps {
         script {
           def scannerHome = tool(env.SONAR_SCANNER_TOOL)
-
           withSonarQubeEnv(env.SONARQUBE_SERVER_NAME) {
             sh """
               set -eux
@@ -58,11 +62,7 @@ pipeline {
           set -eux
           rm -rf dist
           mkdir -p dist
-
-          tar -czf "dist/app-${VERSION}.tar.gz" \
-            --exclude=.git \
-            --exclude=dist \
-            .
+          tar -czf "dist/app-${VERSION}.tar.gz" --exclude=.git --exclude=dist .
           ls -lah dist
         '''
       }
@@ -88,29 +88,21 @@ pipeline {
       }
     }
 
-    // ===== Intentionally fail ONCE for assignment screenshot =====
-    stage('Force Failure (one-time)') {
-      when { branch 'main' }
+    stage('Force Failure (optional)') {
+      when { expression { return params.FORCE_FAIL } }
       steps {
-        script {
-          // Change to false (or delete this stage) after you get the failure email screenshot.
-          def FORCE_FAIL = true
-
-          if (FORCE_FAIL) {
-            error("Intentional failure for assignment screenshot (failure notification).")
-          } else {
-            echo "FORCE_FAIL=false, skipping intentional failure."
-          }
-        }
+        error('Intentional failure for assignment screenshot (failure notification).')
       }
     }
   }
 
   post {
     success {
-      script {
-        def subject = "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME}) deployed"
-        def body = """
+      emailext(
+        to: "${env.NOTIFY_EMAIL}",
+        subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME}) deployed",
+        mimeType: 'text/plain',
+        body: """\
 Job: ${env.JOB_NAME}
 Build: #${env.BUILD_NUMBER}
 Branch: ${env.BRANCH_NAME}
@@ -118,26 +110,17 @@ Version: ${env.VERSION}
 
 Build URL: ${env.BUILD_URL}
 Console URL: ${env.BUILD_URL}console
-
 Artifacts: ${env.BUILD_URL}artifact/
 """
-
-        emailext(
-          to: "${env.NOTIFY_EMAIL}",
-          subject: subject,
-          body: body,
-          mimeType: 'text/plain'
-        )
-      }
+      )
     }
 
     failure {
-      script {
-        def logText = currentBuild.rawBuild.getLog(2000).join("\n")
-        writeFile file: 'build.log', text: logText
-
-        def subject = "FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME})"
-        def body = """
+      emailext(
+        to: "${env.NOTIFY_EMAIL}",
+        subject: "FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME})",
+        mimeType: 'text/plain',
+        body: """\
 Pipeline FAILED.
 
 Job: ${env.JOB_NAME}
@@ -148,18 +131,9 @@ Version: ${env.VERSION}
 Build URL: ${env.BUILD_URL}
 Console URL: ${env.BUILD_URL}console
 
-Error details:
-- See attached build.log (last 2000 lines)
+Tip: Open the Console URL to see the exact error.
 """
-
-        emailext(
-          to: "${env.NOTIFY_EMAIL}",
-          subject: subject,
-          body: body,
-          mimeType: 'text/plain',
-          attachmentsPattern: 'build.log'
-        )
-      }
+      )
     }
 
     always {
