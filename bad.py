@@ -1,2 +1,3 @@
-import subprocess
-subprocess.call("ls", shell=True)
+def f():
+    password = "123456"
+    return password
