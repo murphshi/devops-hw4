@@ -1,1 +1,2 @@
-eval("1+1")
+import subprocess
+subprocess.call("ls", shell=True)
