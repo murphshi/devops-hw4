@@ -87,6 +87,23 @@ pipeline {
         echo 'Running non-main stage'
       }
     }
+
+    // ===== Intentionally fail ONCE for assignment screenshot =====
+    stage('Force Failure (one-time)') {
+      when { branch 'main' }
+      steps {
+        script {
+          // Change to false (or delete this stage) after you get the failure email screenshot.
+          def FORCE_FAIL = true
+
+          if (FORCE_FAIL) {
+            error("Intentional failure for assignment screenshot (failure notification).")
+          } else {
+            echo "FORCE_FAIL=false, skipping intentional failure."
+          }
+        }
+      }
+    }
   }
 
   post {
@@ -116,7 +133,6 @@ Artifacts: ${env.BUILD_URL}artifact/
 
     failure {
       script {
-        
         def logText = currentBuild.rawBuild.getLog(2000).join("\n")
         writeFile file: 'build.log', text: logText
 
