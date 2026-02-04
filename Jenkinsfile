@@ -10,6 +10,8 @@ pipeline {
     SONAR_PROJECT_NAME = 'devops-hw4'
 
     SONAR_SCANNER_TOOL = 'sonar-scanner'
+
+    NOTIFY_EMAIL = 'murphshi0130@gmail.com'
   }
 
   stages {
@@ -88,6 +90,62 @@ pipeline {
   }
 
   post {
+    success {
+      script {
+        def subject = "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME}) deployed"
+        def body = """
+Job: ${env.JOB_NAME}
+Build: #${env.BUILD_NUMBER}
+Branch: ${env.BRANCH_NAME}
+Version: ${env.VERSION}
+
+Build URL: ${env.BUILD_URL}
+Console URL: ${env.BUILD_URL}console
+
+Artifacts: ${env.BUILD_URL}artifact/
+"""
+
+        emailext(
+          to: "${env.NOTIFY_EMAIL}",
+          subject: subject,
+          body: body,
+          mimeType: 'text/plain'
+        )
+      }
+    }
+
+    failure {
+      script {
+        
+        def logText = currentBuild.rawBuild.getLog(2000).join("\n")
+        writeFile file: 'build.log', text: logText
+
+        def subject = "FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${env.BRANCH_NAME})"
+        def body = """
+Pipeline FAILED.
+
+Job: ${env.JOB_NAME}
+Build: #${env.BUILD_NUMBER}
+Branch: ${env.BRANCH_NAME}
+Version: ${env.VERSION}
+
+Build URL: ${env.BUILD_URL}
+Console URL: ${env.BUILD_URL}console
+
+Error details:
+- See attached build.log (last 2000 lines)
+"""
+
+        emailext(
+          to: "${env.NOTIFY_EMAIL}",
+          subject: subject,
+          body: body,
+          mimeType: 'text/plain',
+          attachmentsPattern: 'build.log'
+        )
+      }
+    }
+
     always {
       echo "Pipeline finished on branch: ${env.BRANCH_NAME}"
     }
