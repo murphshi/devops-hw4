@@ -4,13 +4,11 @@ pipeline {
   environment {
     VERSION = "0.1.${env.BUILD_NUMBER}"
 
-    // Must match the "Name" in Manage Jenkins -> System -> SonarQube servers
     SONARQUBE_SERVER_NAME = 'SonarQube'
 
     SONAR_PROJECT_KEY  = 'devops-hw4'
     SONAR_PROJECT_NAME = 'devops-hw4'
 
-    // Must match the "Name" in Manage Jenkins -> Tools -> SonarQube Scanner
     SONAR_SCANNER_TOOL = 'sonar-scanner'
   }
 
@@ -37,7 +35,7 @@ pipeline {
                 -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
                 -Dsonar.projectVersion="${VERSION}" \
                 -Dsonar.sources=. \
-                -Dsonar.exclusions=dist/**,.git/**,**/*.tar.gz
+                -Dsonar.exclusions=dist/**,.git/**,**/*.tar.gz,**/*.zip,**/__pycache__/**,**/.venv/**,**/venv/**,perf/**,**/*.js
             """
           }
         }
